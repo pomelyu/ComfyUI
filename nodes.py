@@ -17,6 +17,9 @@ from PIL.PngImagePlugin import PngInfo
 import numpy as np
 import safetensors.torch
 
+import comfy.taevd
+import comfy.taevd.taevd_wrapper
+
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "comfy"))
 
 import comfy.diffusers_load
@@ -717,6 +720,10 @@ class VAELoader:
                 f1_taesd_dec = True
             elif v.startswith("taef1_decoder."):
                 f1_taesd_enc = True
+            elif v.startswith("taehv."):
+                vaes.append("taehv")
+            elif v.startswith("taew2_1."):
+                vaes.append("taew2_1")
         if sd1_taesd_dec and sd1_taesd_enc:
             vaes.append("taesd")
         if sdxl_taesd_dec and sdxl_taesd_enc:
@@ -757,6 +764,17 @@ class VAELoader:
             sd["vae_shift"] = torch.tensor(0.1159)
         return sd
 
+    @staticmethod
+    def load_taevd(vae_name):
+        sd = {}
+        vae_path = folder_paths.get_full_path_or_raise("vae_approx", f"{vae_name}.pth")
+        vae_state_dict = comfy.utils.load_torch_file(vae_path)
+        taevd = comfy.taevd.taevd_wrapper.TAEVDWrapper(vae_name)
+        vae_state_dict = taevd.patch_tgrow_layers(vae_state_dict)
+        sd = vae_state_dict
+        sd["model_name"] = vae_name
+        return sd
+
     @classmethod
     def INPUT_TYPES(s):
         return {"required": { "vae_name": (s.vae_list(), )}}
@@ -769,6 +787,8 @@ class VAELoader:
     def load_vae(self, vae_name):
         if vae_name in ["taesd", "taesdxl", "taesd3", "taef1"]:
             sd = self.load_taesd(vae_name)
+        elif vae_name in ["taehv", "taew2_1"]:
+            sd = self.load_taevd(vae_name)
         else:
             vae_path = folder_paths.get_full_path_or_raise("vae", vae_name)
             sd = comfy.utils.load_torch_file(vae_path)

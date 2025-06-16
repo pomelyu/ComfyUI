@@ -297,6 +297,16 @@ class VAE:
             elif "taesd_decoder.1.weight" in sd:
                 self.latent_channels = sd["taesd_decoder.1.weight"].shape[1]
                 self.first_stage_model = comfy.taesd.taesd.TAESD(latent_channels=self.latent_channels)
+            elif "decoder.1.weight" in sd:
+                self.upscale_ratio = (lambda a: max(0, a * 4 - 3), 8, 8)
+                self.upscale_index_formula = (4, 8, 8)
+                self.downscale_ratio = (lambda a: max(0, math.floor((a + 3) / 4)), 8, 8)
+                self.downscale_index_formula = (4, 8, 8)
+                self.latent_dim = 3
+                self.latent_channels = sd["decoder.1.weight"].shape[1]
+                self.first_stage_model = comfy.taevd.taevd_wrapper.TAEVDWrapper(sd["model_name"])
+                self.working_dtypes = [torch.float16, torch.float32]
+                del sd["model_name"]
             elif "vquantizer.codebook.weight" in sd: #VQGan: stage a of stable cascade
                 self.first_stage_model = StageA()
                 self.downscale_ratio = 4
