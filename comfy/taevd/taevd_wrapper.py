@@ -1,3 +1,5 @@
+import torch
+
 from comfy import latent_formats
 
 from .taehv import TAEHV
@@ -16,6 +18,8 @@ class TAEVDWrapper(TAEHV):
     def encode(self, x):
         if x.ndim == 4:
             x = x.unsqueeze(0)
+        if x.shape[2] == 1: # has only one frame:
+            x = torch.expand_copy(x, (-1, -1, 4, -1, -1))
 
         x = x.mul_(0.5).add_(0.5)
         x = x.transpose(1, 2)
